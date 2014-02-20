@@ -42,16 +42,7 @@ def data2feat(X_arr, ftype='pix'):
 		X = pool.map(hog, X_im)
 		pool.close()	
 		return np.asarray(X)
-
-	elif ftype is 'daisy':
-		from skimage.feature import daisy
-		L = np.sqrt(len(X_arr[0])).astype(int)
-		X_im = [imresize(arr.reshape((L, L)), (50, 50)) for arr in X_arr]	
-		pool = Pool(processes=8)
-		X = pool.map(daisy, X_im)
-		pool.close()	
-		return np.asarray(X)
-
+		
 	else:
 		return X_arr
 
