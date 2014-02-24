@@ -71,6 +71,7 @@ def train_model(X, Y, finfo):
 		model.append(RandomForestClassifier(nTree, n_jobs=8))
 		model[-1].fit(X[train], Y[train])
 		print_acc(model[-1].predict(X[valid]), Y[valid])
+	return model
 
 
 data = opencsv('../data/train.csv')
