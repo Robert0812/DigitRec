@@ -58,6 +58,21 @@ def data2feat(X_arr, ftype='pix'):
 	else:
 		return X_arr
 
+
+nFold = 10
+nTree = 100
+ftype = 'hog'
+
+def train_model(X, Y, finfo):
+	model = []
+	cv = KFold(n=len(X), n_folds=nFold, indices=True)
+	print 'RF training for feature {} ...'.format(finfo)
+	for train, valid in cv:
+		model.append(RandomForestClassifier(nTree, n_jobs=8))
+		model[-1].fit(X[train], Y[train])
+		print_acc(model[-1].predict(X[valid]), Y[valid])
+
+
 data = opencsv('../data/train.csv')
 X_pix = np.asarray(data)[1:, 1:].astype(np.uint8) 
 Y = np.asarray(data)[1:, 0].astype(np.int)
@@ -66,33 +81,36 @@ from scipy.io import loadmat
 data_feat = loadmat('../data/digit_feat.mat')
 X_spf = data_feat['featTrn1'].astype(np.float32).T
 
-nFold = 10
-nTree = 100
-ftype = 'hog'
-
 X_hog = data2feat(X_pix, ftype)
-X = np.hstack((X_hog, X_spf))
+#X = np.hstack((X_hog, X_spf))
 
-cv = KFold(n=len(X), n_folds=nFold, indices=True)
+#cv = KFold(n=len(X), n_folds=nFold, indices=True)
 
-model = []
-for train, valid in cv:
-	model.append(RandomForestClassifier(nTree, n_jobs=8))
-	model[-1].fit(X[train], Y[train])
-	print_acc(model[-1].predict(X[valid]), Y[valid])
+#model = []
+#for train, valid in cv:
+#	model.append(RandomForestClassifier(nTree, n_jobs=8))
+#	model[-1].fit(X[train], Y[train])
+#	print_acc(model[-1].predict(X[valid]), Y[valid])
+
+model_hog = train_model(X_hog, Y, 'HOG')
+model_spf = train_model(X_spf, Y, 'sparse filtering')
 
 data_test = opencsv('../data/test.csv')
 X_test = np.asarray(data_test)[1:, :].astype(np.uint8)
+X_test_hog = data2feat(X_test, ftype)
+
 X_test_spf = data_feat['featTst1'].astype(np.float32).T
 
-Y_pred_cv = np.zeros((nFold, X_test.shape[0]))
+Y_pred_hog = np.asarray([clf.predict(X_test_hog) for clf in model_hog])
+Y_pred_spf = np.asarray([clf.predict(X_test_spf) for clf in model_spf])
 
-X_test_hog = data2feat(X_test, ftype)
-X_test_feat = np.hstack((X_test_hog, X_test_spf))
-for i in range(nFold):
-	clf = model[i]
-	Y_pred_cv[i, :] = clf.predict(X_test_feat)
+#Y_pred_cv = np.zeros((nFold, X_test.shape[0]))
+#X_test_feat = np.hstack((X_test_hog, X_test_spf))
+#for i in range(nModel):
+#	clf = model[i]
+#	Y_pred_cv[i, :] = clf.predict(X_test_feat)
 
+Y_pred_cv = np.vstack((Y_pred_hog, Y_pred_spf))
 Y_pred = stats.mode(Y_pred_cv)[0].T.astype(np.int)
 
 header = opencsv('../data/rf_benchmark.csv')[0]
